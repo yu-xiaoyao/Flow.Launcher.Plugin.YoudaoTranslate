@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Flow.Launcher.Plugin.YoudaoTranslate.Model;
 using JetBrains.Annotations;
 
@@ -18,6 +19,35 @@ public class YoudaoTranslation
     {
         // return ChineseRegexAttribute.(str);
         return Regex.IsMatch(str, @"[\u4e00-\u9fa5]");
+    }
+
+
+    public static Task<HttpResponseMessage> TranslationTask(Settings settings, string query,
+        [CanBeNull] string from = null,
+        [CanBeNull] string to = null)
+    {
+        if (HasChineseChar(query))
+        {
+            from = "zh-CHS";
+            to = "en";
+        }
+        else
+        {
+            from = "auto";
+            to = "zh-CHS";
+        }
+
+        var paramsMap = CreateRequestParams(query, from, to);
+        AuthV3Util.addAuthParams(settings.AppId, settings.AppSecret, paramsMap);
+        var header = new Dictionary<string, string[]>
+        {
+            { "Content-Type", new[] { "application/x-www-form-urlencoded" } }
+        };
+
+
+        using var client = new HttpClient();
+        client.Timeout = TimeSpan.FromSeconds(5);
+        return HttpUtil.DoPostAsTask(client, settings.Url, header, paramsMap);
     }
 
     public static TranslationResultModel Translation(Settings settings, string query, [CanBeNull] string from = null,
@@ -44,7 +74,7 @@ public class YoudaoTranslation
 
         using var client = new HttpClient();
         client.Timeout = TimeSpan.FromSeconds(5);
-        
+
         byte[] result;
         try
         {
@@ -55,6 +85,25 @@ public class YoudaoTranslation
             return ErrorResult(query, "接口请求超时");
         }
 
+        return ConvertToTranslationResult(result, query);
+    }
+
+    public static TranslationResultModel ConvertTaskToTranslationResult(Task<HttpResponseMessage> task, string query)
+    {
+        var res = task.Result;
+        var suc = res.Content.Headers.TryGetValues("Content-Type", out var contentTypeHeader);
+        if (suc && contentTypeHeader != null && !((string[])contentTypeHeader)[0].Contains("application/json"))
+        {
+            return null;
+        }
+
+        var result = res.Content.ReadAsByteArrayAsync().Result;
+        return ConvertToTranslationResult(result, query);
+    }
+
+
+    public static TranslationResultModel ConvertToTranslationResult(byte[] result, string query)
+    {
         if (result == null) return ErrorResult(query, "Response body is null or empty.");
 
         var resultModel = ParserResult(Encoding.UTF8.GetString(result));
@@ -140,13 +189,13 @@ public class YoudaoTranslation
             ErrorCode = resultModel.ErrorCode,
             Success = true,
             Query = query,
-            From = from,
-            To = to,
+            From = "FROM>>>>",
+            To = "TO>>>>",
             ResultList = resultList
         };
     }
 
-    private static TranslationResultModel ErrorResult(string query, string errorMsg, string? errorCode = null)
+    public static TranslationResultModel ErrorResult(string query, string errorMsg, string? errorCode = null)
     {
         return new TranslationResultModel
         {

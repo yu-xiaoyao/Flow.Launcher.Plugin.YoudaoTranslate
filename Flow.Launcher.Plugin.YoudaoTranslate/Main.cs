@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using Flow.Launcher.Plugin.YoudaoTranslate.Model;
 using Flow.Launcher.Plugin.YoudaoTranslate.Youdao;
 
 namespace Flow.Launcher.Plugin.YoudaoTranslate
@@ -13,6 +16,7 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate
 
         private PluginInitContext _context;
         private Settings _settings;
+        private Task<HttpResponseMessage> _preTask;
 
 
         public void Init(PluginInitContext context)
@@ -50,9 +54,33 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate
             if (string.IsNullOrWhiteSpace(search))
                 return null;
 
-            var startTime = DateTime.Now;
-            var translationResult = YoudaoTranslation.Translation(_settings, search);
-            _context.API.LogInfo("YT", "Query Time: " + (DateTime.Now - startTime).TotalMilliseconds);
+            TranslationResultModel translationResult = YoudaoTranslation.Translation(_settings, search);
+
+            // if (_preTask != null)
+            // {
+            //     if (!_preTask.IsCompleted && !_preTask.IsCanceled && !_preTask.IsFaulted)
+            //     {
+            //         _preTask.Dispose();
+            //         _preTask = null;
+            //     }
+            // }
+            // else
+            // {
+            //     _context.API.LogInfo("TASK", "pre task is null");
+            // }
+
+            // TranslationResultModel translationResult;
+            // _preTask = YoudaoTranslation.TranslationTask(_settings, search);
+            // try
+            // {
+            //     translationResult = YoudaoTranslation.ConvertTaskToTranslationResult(_preTask, search);
+            // }
+            // catch (Exception e)
+            // {
+            //     _context.API.LogException("TASK", e.Message, e);
+            //     return null;
+            // }
+
 
             if (!translationResult.Success)
             {
@@ -67,17 +95,7 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate
                 };
             }
 
-
-            if (translationResult.ResultList == null)
-            {
-                return null;
-            }
-
-            var results = new List<Result>();
-
-            foreach (var itemModel in translationResult.ResultList)
-            {
-                results.Add(new Result
+            return translationResult.ResultList?.Select(itemModel => new Result
                 {
                     Title = itemModel.Src,
                     SubTitle = itemModel.Dst,
@@ -87,10 +105,8 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate
                         _context.API.CopyToClipboard(itemModel.Dst);
                         return true;
                     }
-                });
-            }
-
-            return results;
+                })
+                .ToList();
         }
 
 

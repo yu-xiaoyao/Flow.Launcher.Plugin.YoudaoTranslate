@@ -98,7 +98,6 @@ public class Main_Test
 
 
     public static void testTranslate()
-
     {
         var settings = new Settings
         {

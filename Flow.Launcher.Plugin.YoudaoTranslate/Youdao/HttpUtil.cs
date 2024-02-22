@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using System.Web;
 using JetBrains.Annotations;
 
@@ -12,6 +13,46 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate.Youdao;
 /// </summary>
 static class HttpUtil
 {
+    [CanBeNull]
+    public static Task<HttpResponseMessage> DoPostAsTask(
+        HttpClient client,
+        string url, Dictionary<string, string[]> header,
+        Dictionary<string, string[]> param)
+    {
+        var content = new StringBuilder();
+
+        if (param != null)
+        {
+            var i = 0;
+            foreach (var p in param)
+            {
+                foreach (var v in p.Value)
+                {
+                    if (i > 0) content.Append('&');
+
+                    content.Append($"{p.Key}={HttpUtility.UrlDecode(v)}");
+                    i++;
+                }
+            }
+        }
+
+        var para = new StringContent(content.ToString());
+        if (header != null)
+        {
+            para.Headers.Clear();
+            foreach (var h in header)
+            {
+                foreach (var v in h.Value)
+                {
+                    para.Headers.Add(h.Key, v);
+                }
+            }
+        }
+
+        return client.PostAsync(url, para);
+    }
+
+
     [CanBeNull]
     public static byte[] DoPost(
         HttpClient client,
@@ -51,15 +92,15 @@ static class HttpUtil
 
         // try
         // {
-            var res = client.PostAsync(url, para).Result;
-            var suc = res.Content.Headers.TryGetValues("Content-Type", out var contentTypeHeader);
-            if (suc && contentTypeHeader != null && !((string[])contentTypeHeader)[0].Contains(expectContentType))
-            {
-                // Console.WriteLine(res.Content.ReadAsStringAsync().Result);
-                return null;
-            }
+        var res = client.PostAsync(url, para).Result;
+        var suc = res.Content.Headers.TryGetValues("Content-Type", out var contentTypeHeader);
+        if (suc && contentTypeHeader != null && !((string[])contentTypeHeader)[0].Contains(expectContentType))
+        {
+            // Console.WriteLine(res.Content.ReadAsStringAsync().Result);
+            return null;
+        }
 
-            return res.Content.ReadAsByteArrayAsync().Result;
+        return res.Content.ReadAsByteArrayAsync().Result;
         // }
         // catch (Exception ex)
         // {
