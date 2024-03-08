@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Flow.Launcher.Plugin.YoudaoTranslate.Model;
 using JetBrains.Annotations;
@@ -15,6 +17,11 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate.Youdao;
 /// </summary>
 public class YoudaoTranslation
 {
+    private static readonly HttpClient _httpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(5)
+    };
+
     private static bool HasChineseChar(string str)
     {
         // return ChineseRegexAttribute.(str);
@@ -50,7 +57,8 @@ public class YoudaoTranslation
         return HttpUtil.DoPostAsTask(client, settings.Url, header, paramsMap);
     }
 
-    public static TranslationResultModel Translation(Settings settings, string query, [CanBeNull] string from = null,
+    public static TranslationResultModel Translation(Settings settings, string query, CancellationToken token = default,
+        [CanBeNull] string from = null,
         [CanBeNull] string to = null)
     {
         if (HasChineseChar(query))
@@ -71,21 +79,20 @@ public class YoudaoTranslation
             { "Content-Type", new[] { "application/x-www-form-urlencoded" } }
         };
 
+        var task = HttpUtil.PostStreamAsync(settings.Url, header, paramsMap, token);
 
-        using var client = new HttpClient();
-        client.Timeout = TimeSpan.FromSeconds(5);
+        return ConvertToTranslationResult(StreamToBytes(task.Result), query);
+    }
 
-        byte[] result;
-        try
-        {
-            result = HttpUtil.DoPost(client, settings.Url, header, paramsMap, "application/json");
-        }
-        catch (Exception e)
-        {
-            return ErrorResult(query, "接口请求超时");
-        }
+    public static byte[] StreamToBytes(Stream stream)
+    {
+        byte[] bytes = new byte[stream.Length];
 
-        return ConvertToTranslationResult(result, query);
+        stream.Read(bytes, 0, bytes.Length);
+
+        stream.Seek(0, SeekOrigin.Begin);
+
+        return bytes;
     }
 
     public static TranslationResultModel ConvertTaskToTranslationResult(Task<HttpResponseMessage> task, string query)

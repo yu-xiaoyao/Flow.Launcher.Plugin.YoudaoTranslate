@@ -1,25 +1,27 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
-using Flow.Launcher.Plugin.YoudaoTranslate.Model;
 using Flow.Launcher.Plugin.YoudaoTranslate.Youdao;
 
 namespace Flow.Launcher.Plugin.YoudaoTranslate
 {
-    public class YoudaoTranslate : IPlugin, IContextMenu, ISettingProvider
+    public class YoudaoTranslate : IAsyncPlugin, IContextMenu, ISettingProvider
     {
         private const string IconPath = "YoudaoTranslate.png";
 
         private PluginInitContext _context;
         private Settings _settings;
-        private Task<HttpResponseMessage> _preTask;
 
+        public Task InitAsync(PluginInitContext context)
+        {
+            return Task.Run(() => Init(context));
+        }
 
-        public void Init(PluginInitContext context)
+        private void Init(PluginInitContext context)
         {
             _context = context;
             _settings = context.API.LoadSettingJsonStorage<Settings>();
@@ -28,10 +30,13 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate
 
         public Task<List<Result>> QueryAsync(Query query, CancellationToken token)
         {
-            return Task.FromResult(Query(query));
+            // _context.API.LogInfo("YD",
+            //     $"QueryAsync. CanBeCanceled: {token.CanBeCanceled}. HashCode: {token.GetHashCode()}");
+            // return new Task<List<Result>>(() => Query(query, token));
+            return Task.FromResult(Query(query, token));
         }
 
-        public List<Result> Query(Query query)
+        private List<Result> Query(Query query, CancellationToken token)
         {
             if (string.IsNullOrEmpty(_settings.AppId) || string.IsNullOrEmpty(_settings.AppSecret))
             {
@@ -41,6 +46,7 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate
                     {
                         IcoPath = IconPath,
                         Title = "AppId 或者 AppSecret 没有配置",
+                        SubTitle = "进入设置中配置或者回车配置",
                         Action = _ =>
                         {
                             ShowSettingPanelDialog();
@@ -54,33 +60,14 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate
             if (string.IsNullOrWhiteSpace(search))
                 return null;
 
-            TranslationResultModel translationResult = YoudaoTranslation.Translation(_settings, search);
+            if (_settings.ApiLimitTime > 0)
+            {
+                // 输入太快, API 查询会限制.
+                Thread.Sleep(TimeSpan.FromMilliseconds(_settings.ApiLimitTime));
+            }
 
-            // if (_preTask != null)
-            // {
-            //     if (!_preTask.IsCompleted && !_preTask.IsCanceled && !_preTask.IsFaulted)
-            //     {
-            //         _preTask.Dispose();
-            //         _preTask = null;
-            //     }
-            // }
-            // else
-            // {
-            //     _context.API.LogInfo("TASK", "pre task is null");
-            // }
 
-            // TranslationResultModel translationResult;
-            // _preTask = YoudaoTranslation.TranslationTask(_settings, search);
-            // try
-            // {
-            //     translationResult = YoudaoTranslation.ConvertTaskToTranslationResult(_preTask, search);
-            // }
-            // catch (Exception e)
-            // {
-            //     _context.API.LogException("TASK", e.Message, e);
-            //     return null;
-            // }
-
+            var translationResult = YoudaoTranslation.Translation(_settings, search, token);
 
             if (!translationResult.Success)
             {
@@ -123,6 +110,8 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate
 
         private void ShowSettingPanelDialog()
         {
+            var window = new SettinsWindow(_context, _settings);
+            window.ShowDialog();
         }
     }
 }
