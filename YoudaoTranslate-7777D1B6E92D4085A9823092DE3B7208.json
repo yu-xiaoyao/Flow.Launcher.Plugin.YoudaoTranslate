@@ -1,0 +1,12 @@
+{
+  "ID": "7777D1B6E92D4085A9823092DE3B7208",
+  "Name": "YoudaoTranslate",
+  "Description": "有道翻译",
+  "Author": "yu-xiaoyao",
+  "Version": "1.0.2",
+  "Language": "csharp",
+  "Website": "https://github.com/yu-xiaoyao/Flow.Launcher.Plugin.YoudaoTranslate",
+  "UrlSourceCode": "https://github.com/yu-xiaoyao/Flow.Launcher.Plugin.YoudaoTranslate",
+  "UrlDownload": "https://github.com/yu-xiaoyao/Flow.Launcher.Plugin.YoudaoTranslate/releases/download/v1.0.2/YoudaoTranslate.zip",
+  "IcoPath": "https://raw.githubusercontent.com/yu-xiaoyao/Flow.Launcher.Plugin.YoudaoTranslate/main/Flow.Launcher.Plugin.YoudaoTranslate/Images/YoudaoTranslate.png"
+}

@@ -4,9 +4,9 @@
     "Name": "YoudaoTranslate",
     "Description": "有道翻译",
     "Author": "yu-xiaoyao",
-    "Version": "1.0.1-beta",
+    "Version": "1.0.2",
     "Language": "csharp",
     "Website": "https://github.com/yu-xiaoyao/Flow.Launcher.Plugin.YoudaoTranslate",
-    "IcoPath": "YoudaoTranslate.png",
+    "IcoPath": "Images\\YoudaoTranslate.png",
     "ExecuteFileName": "Flow.Launcher.Plugin.YoudaoTranslate.dll"
 }

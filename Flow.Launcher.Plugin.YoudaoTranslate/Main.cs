@@ -11,7 +11,7 @@ namespace Flow.Launcher.Plugin.YoudaoTranslate
 {
     public class YoudaoTranslate : IAsyncPlugin, IContextMenu, ISettingProvider
     {
-        private const string IconPath = "YoudaoTranslate.png";
+        private const string IconPath = "Images\\YoudaoTranslate.png";
 
         private PluginInitContext _context;
         private Settings _settings;
